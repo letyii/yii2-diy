@@ -58,11 +58,15 @@ class DefaultController extends Controller {
     public function actionBuild($id){
         $model = $this->findModel($id);
         
+        $diy_widget = \letyii\diy\models\DiyWidget::find()->all();
+        
         Yii::$app->view->title = Yii::t($this->module->id, 'Build');
         Yii::$app->view->params['breadcrumbs'][] = ['label' => Yii::t($this->module->id, ucfirst($this->module->id)), 'url' => ['index']];
         Yii::$app->view->params['breadcrumbs'][] = Yii::$app->view->title;
         
-        return $this->render('build');
+        return $this->render('build', [
+            'diy_widget' => $diy_widget
+        ]);
     }
     
     /**
