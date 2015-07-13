@@ -4,6 +4,7 @@ namespace letyii\diy\controllers;
 use Yii;
 use yii\web\Controller;
 use letyii\diy\models\Diy;
+use yii\helpers\ArrayHelper;
 
 class DefaultController extends Controller {
     

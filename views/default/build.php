@@ -9,7 +9,6 @@ use yii\bootstrap\Html;
     </div>
     <div class="col-md-3 col-sm-3 col-xs-12">
         <div id='let_widgets'>
-            
         </div>
     </div>
 </div>
@@ -33,6 +32,12 @@ $this->registerJs("
 $this->registerJs("
     $('.let_position').sortable();
     $('.let_position').disableSelection();
+    
+    $('.let_widget').draggable({
+        connectToSortable: '.let_position',
+        helper: 'clone',
+        revert: 'invalid'
+    });
 ", yii\web\View::POS_READY);
 ?>
 
@@ -40,8 +45,7 @@ $this->registerJs("
 <div id="containerTemplate" style="display: none;">
     <div class="let_container">
         <div class="panel panel-default">
-            <div class="panel-heading">
-                Container name
+            <div class="panel-heading clearfix">
                 <div class="pull-right"><?= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success btn-xs', 'onclick' => 'addPosition(this);']) ?></div>
             </div>
             <div class="panel-body" id="let_positions"></div>
@@ -58,5 +62,4 @@ $this->registerJs("
 <style>
     .let_container {min-height: 40px; margin-bottom: 10px;}
     .let_position {border: 1px dashed #999; background: #f5f5f5; min-height: 20px;}
-    #let_widgets {border: 1px dashed #999; min-height: 200px;}
 </style>
