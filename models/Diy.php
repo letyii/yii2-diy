@@ -4,13 +4,32 @@ namespace letyii\diy\models;
 
 use Yii;
 use yii\data\ActiveDataProvider;
+use yii\bootstrap\Html;
 
 /**
  * This is the model class for collection "diy".
  *
  * @property \MongoId|string $_id
  * @property mixed $title
- * @property mixed $data
+ * @property mixed $data = [
+    // Moi row la mot container
+    'row1' => [
+        // Moi row la mot position
+        'colum1' => [
+            'column' => 12,
+            'widgets' => [
+                // Moi row la mot widget
+                'widget_1' => [
+                    'id' => 'ID_CUA_WIDGET',
+                    'options' => [
+                        'from_time' => '',
+                        'to_time' => '',
+                    ],
+                ],
+            ]
+        ],
+    ],
+];
  * @property mixed $creator
  * @property mixed $create_time
  * @property mixed $editor
@@ -50,5 +69,25 @@ class Diy extends BaseDiy
             $query->orderBy('create_time DESC');
         
         return $dataProvider;
+    }
+    
+    /**
+     * Ham get ra template cua container
+     * @param type $idDiy id cua diy dang build layout
+     * @param type $id id cua container duoc sinh ra
+     * @return string
+     */
+    public static function getTemplateContainer($idDiy = '{idDiy}', $id = '{id}'){
+        $templateContainer = '<div class="let_container" data-idDiy="' . $idDiy . '" data-id="' . $id . '">';
+            $templateContainer .= '<div class="panel panel-default">';
+                $templateContainer .= '<div class="panel-heading clearfix">';
+                    $templateContainer .= '<div class="pull-right">';
+                        $templateContainer .= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success btn-xs', 'onclick' => 'addPosition(this);']);
+                    $templateContainer .= '</div>';
+                $templateContainer .= '</div>';
+                $templateContainer .= '<div class="panel-body" id="let_positions"></div>';
+            $templateContainer .= '</div>';
+        $templateContainer .= '</div>';
+        return $templateContainer;
     }
 }

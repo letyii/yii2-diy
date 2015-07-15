@@ -9,7 +9,10 @@
         "php": ">=5.4",
         "yiisoft/yii2": "*",
         "yiisoft/yii2-jui": "*",
-		"kartik-v/yii2-dynagrid": "*"
+		"kartik-v/yii2-dynagrid": "*",
+        "kartik-v/yii2-datecontrol": "dev-master",
+        "kartik-v/yii2-date-range": "*",
+        "letyii/yii2-tinymce": "*"
     },
     "autoload": {
         "psr-4": {

@@ -65,7 +65,8 @@ class DefaultController extends Controller {
         Yii::$app->view->params['breadcrumbs'][] = Yii::$app->view->title;
         
         return $this->render('build', [
-            'diy_widget' => $diy_widget
+            'diy_widget' => $diy_widget,
+            'model' => $model,
         ]);
     }
     

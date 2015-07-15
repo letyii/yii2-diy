@@ -2,11 +2,16 @@
 use yii\bootstrap\Html;
 use yii\bootstrap\Modal;
 use yii\helpers\Url;
+use letyii\diy\models\Diy;
 ?>
 
 <div class="row">
     <div class="col-md-9 col-sm-9 col-xs-12">
-        <div id="let_containers"></div>
+        <div id="let_containers">
+            <?php if (is_array($model->data) AND !empty($model->data)): foreach ($model->data as $idContainer => $container): ?>
+                <?= Diy::getTemplateContainer((string) $model->_id, $idContainer); ?>
+            <?php endforeach; endif; ?>
+        </div>
         <?= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success col-md-12 col-sm-12 col-xs-12', 'id' => 'addContainer']) ?>
     </div>
     <div class="col-md-3 col-sm-3 col-xs-12">
@@ -39,9 +44,23 @@ use yii\helpers\Url;
 <?php
 $this->registerJsFile('@web/vendor/bower/jquery-ui/jquery-ui.min', ['depends' => yii\web\JqueryAsset::className()]);
 $this->registerJs("
+    // Add container from database
     $('#addContainer').click(function(){
-        var template = $('#containerTemplate').html();
-        $('#let_containers').append(template);
+        var template = '" . Diy::getTemplateContainer() . "';
+        var idDiy = '" . Yii::$app->request->get('id') . "';
+        var id = Math.random().toString(36).replace(/[^a-z|0-9]+/g, '').substr(0, 12);
+        template = template.replace(/{idDiy}/g, idDiy).replace(/{id}/g, id);
+        $.ajax({
+            url: '" . Url::to(['/diy/ajax/addcontainer']) . "',
+            type: 'POST',
+            data: {idDiy: idDiy, id: id},
+        })
+        .done(function (data){
+            if (data == 1)
+                $('#let_containers').append(template);
+            else
+                alert('Có lỗi xảy ra! Không thể thêm mới container.');
+        });
     });
     
     // Them 1 position vao container
@@ -71,6 +90,7 @@ $this->registerJs("
         $('.let_position').droppable({
             drop: function(event, ui) {
                 var draggable_id = $(event.toElement).attr('data-id');
+                console.log(draggable_id);
                 getWidgetInfoFromDb(draggable_id, this);
             }
         });
@@ -89,13 +109,9 @@ $this->registerJs("
         $.ajax({
             url: '" . Url::to(['/diy/ajax/getwidgetinfofromdb']) . "',
             type: 'POST',
-            dataType: 'json',
             data: {id: draggable_id},
         }).done(function(data){
-            console.log(data);
-            var widgetTemplate = $('#widgetTemplate').html().replace(/{title}/g, data.title);
-            $(let_position).html(widgetTemplate);
-            setDraggable();
+            $(let_position).append(data);
         });
     }
 ", yii\web\View::POS_END);
@@ -105,19 +121,6 @@ $this->registerJs("
     setDraggable();
 ", yii\web\View::POS_READY);
 ?>
-
-<!-- TEMPLATE -->
-<div id="containerTemplate" style="display: none;">
-    <div class="let_container">
-        <div class="panel panel-default">
-            <div class="panel-heading clearfix">
-                <div class="pull-right"><?= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success btn-xs', 'onclick' => 'addPosition(this);']) ?></div>
-            </div>
-            <div class="panel-body" id="let_positions"></div>
-        </div>
-    </div>
-</div>
-
 <!-- Column Template -->
 <div id="positionTemplate" style="display: none;">
     <div class="col-md-{numberPostion} col-sm-{numberPostion} col-xs-12 let_position"></div>
@@ -125,9 +128,22 @@ $this->registerJs("
 
 <!-- Widget template by row -->
 <div id="widgetTemplate" style="display: none;">
-    <div class="let_widget">
+    <div class="let_widget" data-id="{id}">
         <div class="btn btn-info">{title}</div>
-        <?= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success']) ?>
+        <?php
+            Modal::begin([
+                'header' => 'Setting widget',
+                'toggleButton' => [
+                    'label' => '<i class="glyphicon glyphicon-plus"></i>',
+                    'class' => 'btn btn-success',
+                ],
+                'id' => 'modal_widget'
+            ]);
+        ?>
+        <div class="row" id="settingWidget">
+            
+        </div>
+        <?php Modal::end(); ?>
     </div>
 </div>
 
