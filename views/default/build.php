@@ -3,13 +3,16 @@ use yii\bootstrap\Html;
 use yii\bootstrap\Modal;
 use yii\helpers\Url;
 use letyii\diy\models\Diy;
+use yii\helpers\ArrayHelper;
 ?>
 
 <div class="row">
     <div class="col-md-9 col-sm-9 col-xs-12">
         <div id="let_containers">
-            <?php if (is_array($model->data) AND !empty($model->data)): foreach ($model->data as $idContainer => $container): ?>
-                <?= Diy::getTemplateContainer((string) $model->_id, $idContainer); ?>
+            <?php if (is_array($model->data) AND !empty($model->data)): foreach ($model->data as $containerId => $container): 
+                $positionItems = ArrayHelper::getValue($model->data, $containerId);
+            ?>
+                <?= Diy::generateTemplateContainer((string) $model->_id, $containerId, $positionItems); ?>
             <?php endforeach; endif; ?>
         </div>
         <?= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success col-md-12 col-sm-12 col-xs-12', 'id' => 'addContainer']) ?>
@@ -46,29 +49,33 @@ $this->registerJsFile('@web/vendor/bower/jquery-ui/jquery-ui.min', ['depends' =>
 $this->registerJs("
     // Add container from database
     $('#addContainer').click(function(){
-        var template = '" . Diy::getTemplateContainer() . "';
-        var idDiy = '" . Yii::$app->request->get('id') . "';
-        var id = Math.random().toString(36).replace(/[^a-z|0-9]+/g, '').substr(0, 12);
-        template = template.replace(/{idDiy}/g, idDiy).replace(/{id}/g, id);
+        var diyId = '" . Yii::$app->request->get('id') . "';
         $.ajax({
-            url: '" . Url::to(['/diy/ajax/addcontainer']) . "',
+            url: '" . Url::to(['/diy/ajax/additem']) . "',
             type: 'POST',
-            data: {idDiy: idDiy, id: id},
+            data: {diyId: diyId, type: 'c'},
         })
         .done(function (data){
-            if (data == 1)
-                $('#let_containers').append(template);
-            else
-                alert('Có lỗi xảy ra! Không thể thêm mới container.');
+            $('#let_containers').append(data);
         });
     });
     
     // Them 1 position vao container
     function addPosition(element){
-        var let_position = prompt('Please enter your number position', '1');
-        var let_template = $('#positionTemplate').html().replace(/{numberPostion}/g, let_position);
-        $(element).parents('.let_container').find('#let_positions').append(let_template);
-        setDropable();
+        var let_position = prompt('Please enter your number position', '12');
+        var containerId = $(element).parents('.let_container').attr('data-id');
+        if (let_position) {
+            var diyId = '" . Yii::$app->request->get('id') . "';
+            $.ajax({
+                url: '" . Url::to(['/diy/ajax/additem']) . "',
+                type: 'POST',
+                data: {diyId: diyId, type: 'p', containerId: containerId, numberColumn: let_position},
+            })
+            .done(function (data){
+                $(element).parents('.let_container').find('#let_positions').append(data);
+                setDropable();
+            });
+        }
     };
     
     // Get data widget by namespace
@@ -90,7 +97,6 @@ $this->registerJs("
         $('.let_position').droppable({
             drop: function(event, ui) {
                 var draggable_id = $(event.toElement).attr('data-id');
-                console.log(draggable_id);
                 getWidgetInfoFromDb(draggable_id, this);
             }
         });
@@ -119,13 +125,52 @@ $this->registerJs("
 $this->registerJs("
     setDropable();
     setDraggable();
+    $('#let_containers').sortable({
+        handle: '.panel-heading',
+        cancel: '.let_positions',
+        update: function(event, ui){
+            var data = $(this).sortable('toArray');
+            var diyId = '" . Yii::$app->request->get('id') . "';
+            $.ajax({
+                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
+                type: 'POST',
+                data: {type: '" . Diy::Container . "', data: data, diyId: diyId},
+            }).done(function(data){
+            });
+        }
+    });
+    
+    $('.let_positions').sortable({
+        connectWith: '.let_positions',
+        receive: function(event, ui){
+            var diyId = '" . Yii::$app->request->get('id') . "';
+            var data = $(this).sortable('toArray');
+            var containerId = $(event.target).attr('data-id');
+            $.ajax({
+                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
+                type: 'POST',
+                dataType: 'json',
+                data: {type: '" . Diy::Position . "', data: data, containerId: containerId, diyId: diyId},
+            }).done(function(data){
+            });
+        },
+        beforeStop: function(event, ui){
+//            var diyId = '" . Yii::$app->request->get('id') . "';
+            var data = $(this).sortable('toArray');
+            console.log(data);
+//            var containerId = $(event.target).attr('data-id');
+//            $.ajax({
+//                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
+//                type: 'POST',
+//                dataType: 'json',
+//                data: {type: '" . Diy::Position . "', data: data, containerId: containerId, diyId: diyId},
+//            }).done(function(data){
+//                console.log(data);
+//            });
+        }
+    });
 ", yii\web\View::POS_READY);
 ?>
-<!-- Column Template -->
-<div id="positionTemplate" style="display: none;">
-    <div class="col-md-{numberPostion} col-sm-{numberPostion} col-xs-12 let_position"></div>
-</div>
-
 <!-- Widget template by row -->
 <div id="widgetTemplate" style="display: none;">
     <div class="let_widget" data-id="{id}">
@@ -149,6 +194,6 @@ $this->registerJs("
 
 <style>
     .let_container {min-height: 40px; margin-bottom: 10px;}
-    .let_position {border: 1px dashed #999; background: #f5f5f5; min-height: 100px;}
+    .let_position {border: 1px solid #999; min-height: 100px;}
     .let_widget {background: white; border: 1px solid #e7eaec; padding: 7px; margin-bottom: 10px;}
 </style>

@@ -47,31 +47,101 @@ class AjaxController extends Controller {
     }
     
     /**
-     * Ham add 1 container vao trong layout moi 1 container 
-     * tuong ung voi 1 row trong layout
+     * Ham add 1 item vao trong layout
      */
-    public function actionAddcontainer(){
-        $result = 0;
-        $idContainer = Yii::$app->request->post('id');
-        $idDiy = Yii::$app->request->post('idDiy');
-        $model = Diy::find()->where(['_id' => $idDiy])->one();
+    public function actionAdditem(){
+        $diyId = Yii::$app->request->post('diyId');
+        $type = Yii::$app->request->post('type');
+        $containerId = Yii::$app->request->post('containerId');
+        $numberColumn = Yii::$app->request->post('numberColumn');
+        
+        // Generate random item id by type
+        $itemId = uniqid($type . '_');
+        
+        // Check type item
+        switch ($type) {
+            case Diy::Container:
+                $template = $this->addContainer($diyId, $itemId);
+                break;
+            case Diy::Position:
+                $template = $this->addPosition($diyId, $itemId, $containerId, $numberColumn);
+                break;
+        }
+        
+        echo $template;
+    }
+    
+    /**
+     * Ham generate template container va add container vao database
+     * @param string $diyId id cua diy
+     * @param string $itemId id cua container
+     * @return string
+     */
+    private function addContainer($diyId, $itemId){
+        // Generate template container
+        $template = Diy::generateTemplateContainer($diyId, $itemId);
+        
+        $model = Diy::find()->where(['_id' => $diyId])->one();
         if ($model) {
+            // Neu data la mang rong thi add container moi vao
             if (empty($model->data)){
                 $model->data = [
-                    $idContainer => []
+                    $itemId => []
                 ];
-            } else {
+            } else { // Neu data khong phai la mang rong thi merge container moi vao mang hien co
                 $model->data = ArrayHelper::merge($model->data, [
-                    $idContainer => []
+                    $itemId => []
                 ]);
             }
             
-            if ($model->save())
-                $result = 1;
-            else
-                $result = 0;
+            $model->save();
         }
         
-        echo $result;
+        return $template;
+    }
+    
+    private function addPosition($diyId, $itemId, $containerId, $numberColumn){
+        // Generate template container
+        $template = Diy::generateTemplatePosition($numberColumn, $diyId, $itemId);
+        
+        $model = Diy::find()->where(['_id' => $diyId])->one();
+        if ($model) {
+            // Check container co position hay chua
+            $container = ArrayHelper::getValue($model->data, $containerId);
+            // Neu chua thi add moi vao container
+            if (empty($container)){
+                $model->data = ArrayHelper::merge($model->data, [
+                    $containerId => [
+                        $itemId => ['column' => $numberColumn]
+                    ]
+                ]);
+            } else { // Neu co position trong container thi add them vao mang hien co
+                $model->data = ArrayHelper::merge($model->data, [
+                        $containerId => ArrayHelper::merge($model->data[$containerId], [
+                            $itemId => ['column' => $numberColumn]
+                        ])
+                    ]
+                );
+            }
+            
+            $model->save();
+        }
+        
+        return $template;
+    }
+    
+    public function actionSortitems(){
+        $type = Yii::$app->request->post('type');
+        $data = Yii::$app->request->post('data');
+        $diyId = Yii::$app->request->post('diyId');
+        $containerId = Yii::$app->request->post('containerId');
+        $positionId = Yii::$app->request->post('positionId');
+        
+        $result = Diy::sortItems($type, $data, $diyId, $containerId, $positionId);
+        
+        if ($result)
+            echo 1;
+        else
+            echo 0;
     }
 }

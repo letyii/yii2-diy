@@ -5,6 +5,7 @@ namespace letyii\diy\models;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\bootstrap\Html;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for collection "diy".
@@ -13,9 +14,9 @@ use yii\bootstrap\Html;
  * @property mixed $title
  * @property mixed $data = [
     // Moi row la mot container
-    'row1' => [
+    'container_1' => [
         // Moi row la mot position
-        'colum1' => [
+        'position_1' => [
             'column' => 12,
             'widgets' => [
                 // Moi row la mot widget
@@ -38,6 +39,12 @@ use yii\bootstrap\Html;
  */
 class Diy extends BaseDiy
 {
+    const Container = 'c';
+
+    const Position = 'p';
+
+    const Widget = 'w';
+
     public function search($params, $pageSize = 20)
     {
         $query = self::find();
@@ -73,21 +80,108 @@ class Diy extends BaseDiy
     
     /**
      * Ham get ra template cua container
-     * @param type $idDiy id cua diy dang build layout
-     * @param type $id id cua container duoc sinh ra
+     * @param string $diyId id cua diy dang build layout
+     * @param string $itemId id cua container duoc sinh ra
+     * @param array $positionItems 1 mang cac position cua container
      * @return string
      */
-    public static function getTemplateContainer($idDiy = '{idDiy}', $id = '{id}'){
-        $templateContainer = '<div class="let_container" data-idDiy="' . $idDiy . '" data-id="' . $id . '">';
-            $templateContainer .= '<div class="panel panel-default">';
-                $templateContainer .= '<div class="panel-heading clearfix">';
-                    $templateContainer .= '<div class="pull-right">';
+    public static function generateTemplateContainer($diyId = null, $itemId = null, $positionItems = []){
+        $templateContainer = Html::beginTag('div', ['class' => 'let_container', 'id' => $itemId, 'data-diyId' => $diyId, 'data-id' => $itemId]);
+            $templateContainer .= Html::beginTag('div', ['class' => 'panel panel-default']);
+                $templateContainer .= Html::beginTag('div', ['class' => 'panel-heading clearfix']);
+                    $templateContainer .= Html::beginTag('div', ['class' => 'pull-right']);
                         $templateContainer .= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['class' => 'btn btn-success btn-xs', 'onclick' => 'addPosition(this);']);
-                    $templateContainer .= '</div>';
-                $templateContainer .= '</div>';
-                $templateContainer .= '<div class="panel-body" id="let_positions"></div>';
-            $templateContainer .= '</div>';
-        $templateContainer .= '</div>';
+                    $templateContainer .= Html::endTag('div');
+                $templateContainer .= Html::endTag('div');
+                $templateContainer .= Html::beginTag('div', ['class' => 'panel-body let_positions', 'data-id' => $itemId]);
+                    if (!empty($positionItems)) {
+                        foreach ($positionItems as $positionId => $position) {
+                            $column = ArrayHelper::getValue($position, 'column');
+                            $widgetItems = ArrayHelper::getValue($position, 'widgets');
+                            $templateContainer .= Diy::generateTemplatePosition($column, $diyId, $positionId, $widgetItems);
+                        }
+                    }
+                $templateContainer .= Html::endTag('div');
+            $templateContainer .= Html::endTag('div');
+        $templateContainer .= Html::endTag('div');
         return $templateContainer;
+    }
+    
+    /**
+     * Ham get ra template cua position
+     * @param int $numberColumn so cot cua position
+     * @param string $diyId id cua diy
+     * @param string $itemId id cua position
+     * @param array $widgetItems mang cac widget cua position
+     * @return string
+     */
+    public static function generateTemplatePosition($numberColumn = 12, $diyId = null, $itemId = null, $widgetItems = []){
+        $tempalatePosition = Html::beginTag('div', ['class' => 'let_position col-md-' . $numberColumn . ' col-sm-' . $numberColumn . ' col-xs-12', 'id' => $itemId, 'data-diyId' => $diyId, 'data-id' => $itemId]);
+            $tempalatePosition .= $itemId;
+        $tempalatePosition .= Html::endTag('div');
+        return $tempalatePosition;
+    }
+
+
+    /**
+     * Ham sap xep cac item va luu vao database.
+     * @param string $type kieu cua item. La mot trong cac gia tri: self::Container, self::Position, self::Widget
+     * @param array $data mang moi sap xep lai cac item
+     * @param string $diyId id cua 1 row trong diy table
+     * @param string $containerId id cua 1 container
+     * @param string $positionId id cua 1 position
+     * @return boolean
+     */
+    public static function sortItems($type, $data, $diyId, $containerId = null, $positionId = null){
+        // Neu type khong la mot trong cac gia tri cho phep va $data rong, id cua diy rong thi return false
+        if (!in_array($type, [self::Container, self::Position, self::Widget]) AND empty($data) AND empty($diyId))
+            return false;
+        
+        $dataResult = [];
+        
+        // Get layout diy 
+        $model = self::find()->where(['_id' => $diyId])->one();
+        if ($model){
+            $diy = $model->data;
+            if ($type == self::Container){
+                foreach ($data as $item) {
+                    // Get value cua container gan vao mang moi
+                    $dataResult[$item] = ArrayHelper::getValue($model->data, $item, []);
+                }
+                $model->data = $dataResult;
+            } elseif ($type == self::Position){
+                // Danh sach cac position goc cua $containerTo
+                $containerTo = ArrayHelper::getValue($diy, $containerId);
+                // Check tung phan tu cua mang $data xem co ton tai trong $containerTo, phan tu khong thuoc $containerTo la phan tu moi duoc them vao container
+                foreach ($data as $positionId) {
+                    if (!isset($containerTo[$positionId]))
+                        $positionMoveId = $positionId;
+                }
+                
+                // Xoa position duoc move ra khoi mang $containerFrom
+                foreach ($diy as $key => $container) {
+                    if (isset($positionMoveId) AND isset($diy[$key][$positionMoveId]) AND $key !== $containerId) {
+                        $positionMove = $diy[$key][$positionMoveId];
+                        unset($diy[$key][$positionMoveId]);
+                    }
+                }
+
+                // Them moi position duoc move vao mang goc cua container
+                if (isset($positionMove)) {
+                    $diy[$containerId][$positionMoveId] = $positionMove;
+                }
+                
+                // Sap xep cac position theo dung thu tu duoc move
+                foreach ($data as $positionId) {
+                    $dataResult[$positionId] = ArrayHelper::getValue($diy[$containerId], $positionId, []);
+                }
+                $diy[$containerId] = $dataResult;
+                
+                $model->data = $diy;
+            }
+            return $model->save();
+        }
+        
+        return false;
     }
 }
