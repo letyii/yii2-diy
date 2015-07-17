@@ -19,25 +19,48 @@ use kartik\daterange\DateRangePicker;
  */
 class DiyWidget extends BaseDiyWidget
 {
-    public static function getTemplateSetting($id, $values){
+    /**
+     * Ham hien thi widget khi duoc tao qua namespace
+     * @param object $model thong tin cua widget khi duoc tao
+     * @return string
+     */
+    public static function generateTemplateWidget($model){
+        $templateWidget = Html::beginTag('div', ['data-id' => (string) $model->_id, 'data-category' => $model->category, 'class' => 'let_widget']);
+            $templateWidget .= $model->title;
+        $templateWidget .= Html::endTag('div');
+        
+        return $templateWidget;
+    }
+
+    /**
+     * Ham generate template widget khi move vao postion.
+     * @param string $id id cua widget
+     * @param array $values Mang gia tri cua cac option
+     * @return string
+     */
+    public static function generateTemplateSetting($id, $values){
         // Get widget info by id
         $model = self::find()->where(['_id' => $id])->one();
         
         $templateSetting = null;
         if ($model){
             // Template widget
-            $templateSetting = '<div class="let_widget" data-id="' . $id . '">';
-                $templateSetting .= '<div class="btn btn-info">' . $model->title . '</div>';
-                $templateSetting .= '<button type="button" class="btn btn-success" data-toggle="modal" data-target="#widget"><i class="glyphicon glyphicon-plus"></i></button>';
-                $templateSetting .= '<!-- Begin modal --><div class="modal fade bs-example-modal-lg" tabindex="-1" id="widget" role="dialog" aria-labelledby="myLargeModalLabel">';
-                    $templateSetting .= '<div class="modal-dialog modal-lg">';
-                        $templateSetting .= '<div class="modal-content">';
-                            $templateSetting .= '<div class="modal-header">';
-                                $templateSetting .= '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
-                                $templateSetting .= '<h4 class="modal-title" id="gridSystemModalLabel">Modal title</h4>';
-                            $templateSetting .= '</div><!-- End .modal-header -->';
-                            $templateSetting .= '<div class="modal-body">';
-                                $templateSetting .= '<div class="row">';
+            $templateSetting = Html::beginTag('div', ['class' => 'let_widget', 'data-id' => $id]);
+                $templateSetting .= Html::beginTag('div', ['class' => 'btn btn-info']);
+                    $templateSetting .= $model->title;
+                $templateSetting .= Html::endTag('div');
+                $templateSetting .= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['type' => 'button', 'class' => 'btn btn-success', 'data-toggle' => 'modal', 'data-target' => '#widget']);
+                $templateSetting .= Html::beginTag('div', ['class' => 'modal fade bs-example-modal-lg', 'tabindex' => '-1', 'id' => 'widget', 'role' => 'dialog', 'aria-labelledby' => 'myLargeModalLabel']);
+                    $templateSetting .= Html::beginTag('div', ['class' => 'modal-dialog modal-lg']);
+                        $templateSetting .= Html::beginTag('div', ['class' => 'modal-content']);
+                            $templateSetting .= Html::beginTag('div', ['class' => 'modal-header']);
+                                $templateSetting .= Html::button('<span aria-hidden="true">&times;</span>', ['type' => 'button', 'class' => 'close', 'data-dismiss' => 'modal', 'aria-label' => 'Close']);
+                                $templateSetting .= Html::beginTag('h4', ['class' => 'modal-title', 'id' => 'gridSystemModalLabel']);
+                                    $templateSetting .= 'Modal title';
+                                $templateSetting .= Html::endTag('h4');
+                            $templateSetting .= Html::endTag('div');// End .modal-header
+                            $templateSetting .= Html::beginTag('div', ['class' => 'modal-body']);
+                                $templateSetting .= Html::beginTag('div', ['class' => 'row']);
                                     if (!empty($model->setting)) {
                                         foreach ($model->setting as $keySetting => $config) {
                                             // Kieu hien thi cua setting
@@ -47,21 +70,23 @@ class DiyWidget extends BaseDiyWidget
                                             // Danh sach cac gia tri cua setting neu la dropdown, checkbox, radio
                                             $items = ArrayHelper::getValue($config, 'items');
 
-                                            $templateSetting .= '<div class="form-group field-setting-key">';
-                                                $templateSetting .= '<label class="control-label col-sm-2" for="DiyWidget-' . $keySetting . '">' . $keySetting . '</label>';
-                                                $templateSetting .= '<div class="col-sm-10">';
+                                            $templateSetting .= Html::beginTag('div', ['class' => 'form-group field-setting-key']);
+                                                $templateSetting .= Html::beginTag('label', ['class' => 'control-label col-sm-2', 'for' => 'DiyWidget-' . $keySetting . '']);
+                                                    $templateSetting .= $keySetting;
+                                                $templateSetting .= Html::endTag('label');
+                                                $templateSetting .= Html::beginTag('div', ['class' => 'col-sm-10']);
                                                     $templateSetting .= self::getInputByType($type, $templateSetting, $keySetting, $value, $items);
-                                                    $templateSetting .= '<div class="help-block help-block-error help-block m-b-none"></div>';
-                                                $templateSetting .= '</div>';
-                                            $templateSetting .= '</div>';
+                                                    $templateSetting .= Html::beginTag('div', ['class' => 'help-block help-block-error help-block m-b-none']) . Html::endTag('div');
+                                                $templateSetting .= Html::endTag('div');// End .col-sm-10
+                                            $templateSetting .= Html::endTag('div');// End .field-setting-key
                                         }
                                     }
-                                $templateSetting .= '</div><!-- End .row -->';
-                            $templateSetting .= '</div><!-- End .modal-body -->';
-                        $templateSetting .= '</div><!-- End .modal-content -->';
-                    $templateSetting .= '</div><!-- End .modal-dialog -->';
-                $templateSetting .= '</div><!-- End modal -->';
-            $templateSetting .= '</div>';
+                                $templateSetting .= Html::endTag('div');// End .row
+                            $templateSetting .= Html::endTag('div');// End .modal-body
+                        $templateSetting .= Html::endTag('div');// End .modal-content
+                    $templateSetting .= Html::endTag('div');// End .modal-dialog
+                $templateSetting .= Html::endTag('div');// End .modal
+            $templateSetting .= Html::endTag('div');// End .let_widget
         }
         
         return $templateSetting;

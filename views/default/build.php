@@ -3,10 +3,11 @@ use yii\bootstrap\Html;
 use yii\bootstrap\Modal;
 use yii\helpers\Url;
 use letyii\diy\models\Diy;
+use letyii\diy\models\DiyWidget;
 use yii\helpers\ArrayHelper;
 ?>
-
-<div class="row">
+<div class="wrapper wrapper-content animated fadeInRight">
+<div class="row clearfix">
     <div class="col-md-9 col-sm-9 col-xs-12">
         <div id="let_containers">
             <?php if (is_array($model->data) AND !empty($model->data)): foreach ($model->data as $containerId => $container): 
@@ -20,9 +21,10 @@ use yii\helpers\ArrayHelper;
     <div class="col-md-3 col-sm-3 col-xs-12">
         <div id='let_widgets'>
             <?php foreach ($diy_widget as $widget): ?>
-                <div data-id="<?= (string) $widget->_id; ?>" data-category="<?= $widget->category; ?>" class="let_widget"><?= $widget->title; ?></div>
+                <?= DiyWidget::generateTemplateWidget($widget); ?>
             <?php endforeach; ?>
         </div>
+        <!-- Begin add widget button -->
         <?php
             Modal::begin([
                 'header' => 'Load widget by namespace',
@@ -38,14 +40,15 @@ use yii\helpers\ArrayHelper;
                 <input type="text" id="let_addClass" class="form-control" />
             </div>
             <div class="col-md-3 col-sm-3 col-xs-12">
-                <?= Html::button('Get widget', ['class' => 'btn btn-success col-md-12 col-sm-12 col-xs-12', 'id' => 'getWidget', 'onclick' => 'getWidget();']) ?>
+                <?= Html::button('Get widget', ['class' => 'btn btn-success col-md-12 col-sm-12 col-xs-12', 'id' => 'getWidget', 'onclick' => 'addWidget();']) ?>
             </div>
         </div>
         <?php Modal::end(); ?>
+        <!-- End add widget button -->
     </div>
 </div>
 <?php
-$this->registerJsFile('@web/vendor/bower/jquery-ui/jquery-ui.min', ['depends' => yii\web\JqueryAsset::className()]);
+$this->registerJsFile('@web/vendor/bower/jquery-ui/jquery-ui.min.js', ['depends' => yii\web\JqueryAsset::className()]);
 $this->registerJs("
     // Add container from database
     $('#addContainer').click(function(){
@@ -72,23 +75,26 @@ $this->registerJs("
                 data: {diyId: diyId, type: 'p', containerId: containerId, numberColumn: let_position},
             })
             .done(function (data){
-                $(element).parents('.let_container').find('#let_positions').append(data);
+                $(element).parents('.let_container').find('.let_positions').append(data);
                 setDropable();
             });
         }
     };
     
-    // Get data widget by namespace
-    function getWidget(){
+    // Them 1 widget qua namespace vao database 
+    function addWidget(){
         var let_addClass = $('#let_addClass').val();
         $.ajax({
-            url: '" . Url::to(['/diy/ajax/getwidget']) . "',
+            url: '" . Url::to(['/diy/ajax/addwidget']) . "',
             type: 'POST',
             dataType: 'json',
             data: {class: let_addClass},
         })
         .done(function (data){
+            if (data.status == 1)
+                $('#let_widgets').append(data.template);
             
+            alert(data.message);
         });
     }
     
@@ -96,8 +102,10 @@ $this->registerJs("
     function setDropable(){
         $('.let_position').droppable({
             drop: function(event, ui) {
+                var containerId = $('#' + $(event.target).attr('id')).parent().attr('data-id');
                 var draggable_id = $(event.toElement).attr('data-id');
-                getWidgetInfoFromDb(draggable_id, this);
+                var positionId = $(event.target).attr('id');
+                getWidgetInfoFromDb(containerId, positionId, draggable_id, this);
             }
         });
     }
@@ -111,11 +119,12 @@ $this->registerJs("
     }
     
     // Get widget info by id from database
-    function getWidgetInfoFromDb(draggable_id, let_position){
+    function getWidgetInfoFromDb(containerId, positionId, draggable_id, let_position){
+        var diyId = '" . Yii::$app->request->get('id') . "';
         $.ajax({
-            url: '" . Url::to(['/diy/ajax/getwidgetinfofromdb']) . "',
+            url: '" . Url::to(['/diy/ajax/additem']) . "',
             type: 'POST',
-            data: {id: draggable_id},
+            data: {diyId: diyId, type: 'w', containerId: containerId, positionId: positionId, draggable_id: draggable_id},
         }).done(function(data){
             $(let_position).append(data);
         });
@@ -142,7 +151,7 @@ $this->registerJs("
     
     $('.let_positions').sortable({
         connectWith: '.let_positions',
-        receive: function(event, ui){
+        update: function(event, ui){
             var diyId = '" . Yii::$app->request->get('id') . "';
             var data = $(this).sortable('toArray');
             var containerId = $(event.target).attr('data-id');
@@ -153,45 +162,11 @@ $this->registerJs("
                 data: {type: '" . Diy::Position . "', data: data, containerId: containerId, diyId: diyId},
             }).done(function(data){
             });
-        },
-        beforeStop: function(event, ui){
-//            var diyId = '" . Yii::$app->request->get('id') . "';
-            var data = $(this).sortable('toArray');
-            console.log(data);
-//            var containerId = $(event.target).attr('data-id');
-//            $.ajax({
-//                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
-//                type: 'POST',
-//                dataType: 'json',
-//                data: {type: '" . Diy::Position . "', data: data, containerId: containerId, diyId: diyId},
-//            }).done(function(data){
-//                console.log(data);
-//            });
         }
     });
 ", yii\web\View::POS_READY);
 ?>
-<!-- Widget template by row -->
-<div id="widgetTemplate" style="display: none;">
-    <div class="let_widget" data-id="{id}">
-        <div class="btn btn-info">{title}</div>
-        <?php
-            Modal::begin([
-                'header' => 'Setting widget',
-                'toggleButton' => [
-                    'label' => '<i class="glyphicon glyphicon-plus"></i>',
-                    'class' => 'btn btn-success',
-                ],
-                'id' => 'modal_widget'
-            ]);
-        ?>
-        <div class="row" id="settingWidget">
-            
-        </div>
-        <?php Modal::end(); ?>
-    </div>
 </div>
-
 <style>
     .let_container {min-height: 40px; margin-bottom: 10px;}
     .let_position {border: 1px solid #999; min-height: 100px;}

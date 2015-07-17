@@ -118,6 +118,12 @@ class Diy extends BaseDiy
     public static function generateTemplatePosition($numberColumn = 12, $diyId = null, $itemId = null, $widgetItems = []){
         $tempalatePosition = Html::beginTag('div', ['class' => 'let_position col-md-' . $numberColumn . ' col-sm-' . $numberColumn . ' col-xs-12', 'id' => $itemId, 'data-diyId' => $diyId, 'data-id' => $itemId]);
             $tempalatePosition .= $itemId;
+            if (!empty($widgetItems)) {
+                foreach ($widgetItems as $widget) {
+                    $id = ArrayHelper::getValue($widget, 'id');
+                    $tempalatePosition .= DiyWidget::generateTemplateSetting($id, []);
+                }
+            }
         $tempalatePosition .= Html::endTag('div');
         return $tempalatePosition;
     }
@@ -149,39 +155,65 @@ class Diy extends BaseDiy
                     $dataResult[$item] = ArrayHelper::getValue($model->data, $item, []);
                 }
                 $model->data = $dataResult;
+                return $model->save();
             } elseif ($type == self::Position){
-                // Danh sach cac position goc cua $containerTo
-                $containerTo = ArrayHelper::getValue($diy, $containerId);
-                // Check tung phan tu cua mang $data xem co ton tai trong $containerTo, phan tu khong thuoc $containerTo la phan tu moi duoc them vao container
-                foreach ($data as $positionId) {
-                    if (!isset($containerTo[$positionId]))
-                        $positionMoveId = $positionId;
-                }
-                
-                // Xoa position duoc move ra khoi mang $containerFrom
-                foreach ($diy as $key => $container) {
-                    if (isset($positionMoveId) AND isset($diy[$key][$positionMoveId]) AND $key !== $containerId) {
-                        $positionMove = $diy[$key][$positionMoveId];
-                        unset($diy[$key][$positionMoveId]);
-                    }
-                }
-
-                // Them moi position duoc move vao mang goc cua container
-                if (isset($positionMove)) {
-                    $diy[$containerId][$positionMoveId] = $positionMove;
-                }
-                
-                // Sap xep cac position theo dung thu tu duoc move
-                foreach ($data as $positionId) {
-                    $dataResult[$positionId] = ArrayHelper::getValue($diy[$containerId], $positionId, []);
-                }
-                $diy[$containerId] = $dataResult;
-                
-                $model->data = $diy;
+                // Call function sort position
+                self::sortPosition($data, $diy, $model, $containerId);
             }
-            return $model->save();
         }
         
         return false;
+    }
+    
+    /**
+     * Ham sap xep position.
+     * @param array $data mang position da duoc sap xep
+     * @param array $diy mang $data cua layout diy
+     * @param object $model layout diy
+     * @param string $containerId container id
+     * @return boolean
+     */
+    private static function sortPosition($data, $diy, $model, $containerId){
+        // Danh sach cac position goc cua $containerTo
+        $containerTo = ArrayHelper::getValue($diy, $containerId);
+        // Truong hop move tu container nay sang container khac
+        if (count($data) > count($containerTo)){
+            // Check tung phan tu cua mang $data xem co ton tai trong $containerTo, phan tu khong thuoc $containerTo la phan tu moi duoc them vao container
+            foreach ($data as $positionId) {
+                if (!isset($containerTo[$positionId]))
+                    $positionMoveId = $positionId;
+            }
+
+            // Xoa position duoc move ra khoi mang $containerFrom
+            foreach ($diy as $key => $container) {
+                if (isset($positionMoveId) AND isset($diy[$key][$positionMoveId]) AND $key !== $containerId) {
+                    $positionMove = $diy[$key][$positionMoveId];
+                    unset($diy[$key][$positionMoveId]);
+                }
+            }
+
+            // Them moi position duoc move vao mang goc cua container
+            if (isset($positionMove)) {
+                $diy[$containerId][$positionMoveId] = $positionMove;
+            }
+
+            // Sap xep cac position theo dung thu tu duoc move
+            foreach ($data as $positionId) {
+                $dataResult[$positionId] = ArrayHelper::getValue($diy[$containerId], $positionId, []);
+            }
+            $diy[$containerId] = $dataResult;
+
+            $model->data = $diy;
+            return $model->save();
+        } elseif (count($data) === count($containerTo)){ // Truong hop move cac position ben trong container
+            // Sap xep cac position theo dung thu tu duoc move
+            foreach ($data as $positionId) {
+                $dataResult[$positionId] = ArrayHelper::getValue($diy[$containerId], $positionId, []);
+            }
+            $diy[$containerId] = $dataResult;
+
+            $model->data = $diy;
+            return $model->save();
+        }
     }
 }
