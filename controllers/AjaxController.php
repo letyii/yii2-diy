@@ -164,7 +164,7 @@ class AjaxController extends Controller {
      */
     private function addWidget($diyId, $itemId, $containerId, $positionId, $draggable_id){
         // Generate template widget
-        $template = DiyWidget::generateTemplateSetting($draggable_id, []);
+        $template = DiyWidget::generateTemplateSetting($itemId, $draggable_id, []);
         
         $model = Diy::find()->where(['_id' => $diyId])->one();
         if ($model) {

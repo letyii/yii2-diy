@@ -119,9 +119,9 @@ class Diy extends BaseDiy
         $tempalatePosition = Html::beginTag('div', ['class' => 'let_position col-md-' . $numberColumn . ' col-sm-' . $numberColumn . ' col-xs-12', 'id' => $itemId, 'data-diyId' => $diyId, 'data-id' => $itemId]);
             $tempalatePosition .= $itemId;
             if (!empty($widgetItems)) {
-                foreach ($widgetItems as $widget) {
+                foreach ($widgetItems as $widgetId => $widget) {
                     $id = ArrayHelper::getValue($widget, 'id');
-                    $tempalatePosition .= DiyWidget::generateTemplateSetting($id, []);
+                    $tempalatePosition .= DiyWidget::generateTemplateSetting($widgetId, $id, []);
                 }
             }
         $tempalatePosition .= Html::endTag('div');
@@ -159,6 +159,9 @@ class Diy extends BaseDiy
             } elseif ($type == self::Position){
                 // Call function sort position
                 self::sortPosition($data, $diy, $model, $containerId);
+            } elseif ($type == self::Widget){
+                // Call function sort widget
+                self::sortWidget($data, $diy, $model, $containerId, $positionId);
             }
         }
         
@@ -184,11 +187,12 @@ class Diy extends BaseDiy
                     $positionMoveId = $positionId;
             }
 
-            // Xoa position duoc move ra khoi mang $containerFrom
+            // Xoa position duoc move ra khoi mang $diy
             foreach ($diy as $key => $container) {
                 if (isset($positionMoveId) AND isset($diy[$key][$positionMoveId]) AND $key !== $containerId) {
                     $positionMove = $diy[$key][$positionMoveId];
                     unset($diy[$key][$positionMoveId]);
+                    break;
                 }
             }
 
@@ -211,6 +215,61 @@ class Diy extends BaseDiy
                 $dataResult[$positionId] = ArrayHelper::getValue($diy[$containerId], $positionId, []);
             }
             $diy[$containerId] = $dataResult;
+
+            $model->data = $diy;
+            return $model->save();
+        }
+    }
+    
+    /**
+     * Ham sap xep widget
+     * @param array $data mang position da duoc sap xep
+     * @param array $diy mang $data cua layout diy
+     * @param object $model layout diy
+     * @param string $containerId id cua container duoc move
+     * @param string $positionId id cua position duoc move
+     * @return boolean
+     */
+    private static function sortWidget($data, $diy, $model, $containerId, $positionId){
+        // Danh sach cac widget goc cua $positionTo
+        $positionTo = ArrayHelper::getValue($diy[$containerId][$positionId], 'widgets');
+        // Truong hop move tu position nay sang position khac
+        if (count($data) > count($positionTo)){
+            // Check tung phan tu cua mang $data xem co ton tai trong $positionTo, phan tu khong thuoc $positionTo la phan tu moi duoc them vao position
+            foreach ($data as $widgetId) {
+                if (!isset($positionTo[$widgetId]))
+                    $widgetMoveId = $widgetId;
+            }
+
+            // Xoa widget duoc move ra khoi mang $diy
+            foreach ($diy as $container_id => $positions) {
+                foreach ($positions as $position_id => $position) {
+                    if (isset($widgetMoveId) AND isset($diy[$container_id][$position_id]['widgets'][$widgetMoveId]) AND $position_id !== $positionId) {
+                        $widgetMove = $diy[$container_id][$position_id]['widgets'][$widgetMoveId];
+                        unset($diy[$container_id][$position_id]['widgets'][$widgetMoveId]);
+                        break;
+                    }
+                }
+            }
+
+            // Them moi widget duoc move vao mang goc cua position
+            if (isset($widgetMove)) {
+                $diy[$containerId][$positionId]['widgets'][$widgetMoveId] = $widgetMove;
+            }
+            // Sap xep cac widget theo dung thu tu duoc move
+            foreach ($data as $widgetId) {
+                $dataResult[$widgetId] = ArrayHelper::getValue($diy[$containerId][$positionId]['widgets'], $widgetId, []);
+            }
+            $diy[$containerId][$positionId]['widgets'] = $dataResult;
+            
+            $model->data = $diy;
+            return $model->save();
+        } elseif (count($data) === count($positionTo)){// Truong hop move cac widget ben trong position
+            // Sap xep cac widget theo dung thu tu duoc move
+            foreach ($data as $widgetId) {
+                $dataResult[$widgetId] = ArrayHelper::getValue($diy[$containerId][$positionId]['widgets'], $widgetId, []);
+            }
+            $diy[$containerId][$positionId]['widgets'] = $dataResult;
 
             $model->data = $diy;
             return $model->save();

@@ -76,7 +76,7 @@ $this->registerJs("
             })
             .done(function (data){
                 $(element).parents('.let_container').find('.let_positions').append(data);
-                setDropable();
+                setDropablePosition();
             });
         }
     };
@@ -98,9 +98,10 @@ $this->registerJs("
         });
     }
     
-    // Set position to droppable
-    function setDropable(){
+    // Them widget vao position duoc keo khi keo tha tu danh sach widget
+    function setDropablePosition(){
         $('.let_position').droppable({
+            accept: '.let_widget_origin',
             drop: function(event, ui) {
                 var containerId = $('#' + $(event.target).attr('id')).parent().attr('data-id');
                 var draggable_id = $(event.toElement).attr('data-id');
@@ -110,9 +111,10 @@ $this->registerJs("
         });
     }
     
+    // Tao hieu ung keo tha widget
     function setDraggable(){
-        $('.let_widget').draggable({
-            connectWith: '.let_widget',
+        $('.let_widget_origin').draggable({
+            connectWith: '.let_widget_origin',
             helper: 'clone',
             revert: 'invalid'
         });
@@ -132,8 +134,9 @@ $this->registerJs("
 ", yii\web\View::POS_END);
 
 $this->registerJs("
-    setDropable();
+    setDropablePosition();
     setDraggable();
+    // Keo tha sap xep container
     $('#let_containers').sortable({
         handle: '.panel-heading',
         cancel: '.let_positions',
@@ -149,6 +152,7 @@ $this->registerJs("
         }
     });
     
+    // Keo tha sap xep position
     $('.let_positions').sortable({
         connectWith: '.let_positions',
         update: function(event, ui){
@@ -164,6 +168,26 @@ $this->registerJs("
             });
         }
     });
+    
+    // Keo tha sap xep widget
+    $('.let_position').sortable({
+        revert: true,
+        connectWith: '.let_position',
+        update: function(event, ui){
+            var diyId = '" . Yii::$app->request->get('id') . "';
+            var data = $(this).sortable('toArray');
+            var containerId = $(event.target).parent().attr('data-id');
+            var positionId = $(event.target).attr('data-id');
+            $.ajax({
+                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
+                type: 'POST',
+                dataType: 'json',
+                data: {type: '" . Diy::Widget . "', data: data, containerId: containerId, positionId: positionId, diyId: diyId},
+            }).done(function(data){
+                console.log(data);
+            });
+        }
+    });
 ", yii\web\View::POS_READY);
 ?>
 </div>
@@ -171,4 +195,5 @@ $this->registerJs("
     .let_container {min-height: 40px; margin-bottom: 10px;}
     .let_position {border: 1px solid #999; min-height: 100px;}
     .let_widget {background: white; border: 1px solid #e7eaec; padding: 7px; margin-bottom: 10px;}
+    .let_widget_origin {background: white; border: 1px solid #e7eaec; padding: 7px; margin-bottom: 10px;}
 </style>

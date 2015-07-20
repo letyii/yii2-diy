@@ -25,7 +25,7 @@ class DiyWidget extends BaseDiyWidget
      * @return string
      */
     public static function generateTemplateWidget($model){
-        $templateWidget = Html::beginTag('div', ['data-id' => (string) $model->_id, 'data-category' => $model->category, 'class' => 'let_widget']);
+        $templateWidget = Html::beginTag('div', ['data-id' => (string) $model->_id, 'data-category' => $model->category, 'class' => 'let_widget_origin']);
             $templateWidget .= $model->title;
         $templateWidget .= Html::endTag('div');
         
@@ -34,20 +34,21 @@ class DiyWidget extends BaseDiyWidget
 
     /**
      * Ham generate template widget khi move vao postion.
+     * @param string $widgetId id cua widget trong mang data cua diy
      * @param string $id id cua widget
      * @param array $values Mang gia tri cua cac option
      * @return string
      */
-    public static function generateTemplateSetting($id, $values){
+    public static function generateTemplateSetting($widgetId, $id, $values){
         // Get widget info by id
         $model = self::find()->where(['_id' => $id])->one();
         
         $templateSetting = null;
         if ($model){
             // Template widget
-            $templateSetting = Html::beginTag('div', ['class' => 'let_widget', 'data-id' => $id]);
+            $templateSetting = Html::beginTag('div', ['class' => 'let_widget', 'data-id' => $id, 'id' => $widgetId]);
                 $templateSetting .= Html::beginTag('div', ['class' => 'btn btn-info']);
-                    $templateSetting .= $model->title;
+                    $templateSetting .= $model->title . ' - ' . $widgetId;
                 $templateSetting .= Html::endTag('div');
                 $templateSetting .= Html::button('<i class="glyphicon glyphicon-plus"></i>', ['type' => 'button', 'class' => 'btn btn-success', 'data-toggle' => 'modal', 'data-target' => '#widget']);
                 $templateSetting .= Html::beginTag('div', ['class' => 'modal fade bs-example-modal-lg', 'tabindex' => '-1', 'id' => 'widget', 'role' => 'dialog', 'aria-labelledby' => 'myLargeModalLabel']);
