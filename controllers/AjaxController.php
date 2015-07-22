@@ -56,14 +56,19 @@ class AjaxController extends Controller {
     public function actionAdditem(){
         // Kieu item duoc sap xep
         $type = Yii::$app->request->post('type');
+        
         // Id cua diy
         $diyId = Yii::$app->request->post('diyId');
+        
         // Id cua container khi sap xep position, widget, them moi position
         $containerId = Yii::$app->request->post('containerId');
+        
         // Id cua position khi sap xep, them moi widget
         $positionId = Yii::$app->request->post('positionId');
+        
         // So cot cua mot position
         $numberColumn = Yii::$app->request->post('numberColumn');
+        
         // Id cua widget
         $draggable_id = Yii::$app->request->post('draggable_id');
         
@@ -125,7 +130,7 @@ class AjaxController extends Controller {
      */
     private function addPosition($diyId, $itemId, $containerId, $numberColumn){
         // Generate template container
-        $template = Diy::generateTemplatePosition($numberColumn, $diyId, $itemId);
+        $template = Diy::generateTemplatePosition($numberColumn, $diyId, $containerId, $itemId);
         
         $model = Diy::find()->where(['_id' => $diyId])->one();
         if ($model) {
@@ -164,12 +169,12 @@ class AjaxController extends Controller {
      */
     private function addWidget($diyId, $itemId, $containerId, $positionId, $draggable_id){
         // Generate template widget
-        $template = DiyWidget::generateTemplateSetting($itemId, $draggable_id, []);
+        $template = DiyWidget::generateTemplateSetting($containerId, $positionId, $itemId, $draggable_id, []);
         
         $model = Diy::find()->where(['_id' => $diyId])->one();
         if ($model) {
             // Check position co widget hay chua
-            $position = ArrayHelper::getValue($model->data[$containerId][$positionId], 'widgets');
+            $position = ArrayHelper::getValue($model->data[$containerId][$positionId], 'widgets', []);
             // Neu chua thi add moi vao position
             if (empty($position)){
                 $model->data = ArrayHelper::merge($model->data, [
@@ -183,7 +188,7 @@ class AjaxController extends Controller {
                         ])
                     ]
                 ]);
-            } else { // Neu co position trong container thi add them vao mang hien co
+            } else { // Neu co widget trong position thi add them vao mang hien co
                 $model->data = ArrayHelper::merge($model->data, [
                     $containerId => [
                         $positionId => ArrayHelper::merge($model->data[$containerId][$positionId], [
@@ -207,16 +212,66 @@ class AjaxController extends Controller {
     public function actionSortitems(){
         // Kieu item duoc sap xep
         $type = Yii::$app->request->post('type');
+        
         // Mang du lieu da sap xep
         $data = Yii::$app->request->post('data');
+        
         // Id cua diy
         $diyId = Yii::$app->request->post('diyId');
+        
         // Id cua container khi sap xep position, widget, them moi position
         $containerId = Yii::$app->request->post('containerId');
+        
         // Id cua position khi sap xep, them moi widget
         $positionId = Yii::$app->request->post('positionId');
+        
         // Ham sap xep item, tra ve gia tri boolean
         $result = Diy::sortItems($type, $data, $diyId, $containerId, $positionId);
+        
+        echo $result;
+    }
+    
+    // Action xu ly viec xoa cac item: container, position, widget
+    public function actionDeleteitems(){
+        // Kieu item xoa
+        $type = Yii::$app->request->post('type');
+        
+        // Id cua diy
+        $diyId = Yii::$app->request->post('diyId');
+        
+        // Id cua container
+        $containerId = Yii::$app->request->post('containerId');
+        
+        // Id cua position
+        $positionId = Yii::$app->request->post('positionId');
+        
+        // Id cua widget
+        $widgetId = Yii::$app->request->post('widgetId');
+        
+        // Ham sap xep item, tra ve gia tri boolean
+        $result = Diy::deleteItems($type, $diyId, $containerId, $positionId, $widgetId);
+        
+        echo $result;
+    }
+    
+    public function actionSavesettingwidget(){
+        // Id cua diy
+        $diyId = Yii::$app->request->post('diyId');
+        
+        // Id container
+        $containerId = Yii::$app->request->post('containerId');
+        
+        // Id position
+        $positionId = Yii::$app->request->post('positionId');
+        
+        // Id widget
+        $widgetId = Yii::$app->request->post('widgetId');
+        
+        // Mang gia tri setting duoc luu
+        $settings = Yii::$app->request->post('settings');
+
+        // Call function save setting by widget
+        $result = DiyWidget::saveSettingWidget($diyId, $containerId, $positionId, $widgetId, $settings);
         
         echo $result;
     }

@@ -12,7 +12,8 @@
 		"kartik-v/yii2-dynagrid": "*",
         "kartik-v/yii2-datecontrol": "dev-master",
         "kartik-v/yii2-date-range": "*",
-        "letyii/yii2-tinymce": "*"
+        "letyii/yii2-tinymce": "*",
+        "bower-asset/sweetalert": "*"
     },
     "autoload": {
         "psr-4": {

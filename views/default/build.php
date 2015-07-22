@@ -50,6 +50,45 @@ use yii\helpers\ArrayHelper;
 <?php
 $this->registerJsFile('@web/vendor/bower/jquery-ui/jquery-ui.min.js', ['depends' => yii\web\JqueryAsset::className()]);
 $this->registerJs("
+    // Keo tha sap xep position
+    function sortPosition(){
+        $('.let_positions').sortable({
+            connectWith: '.let_positions',
+            update: function(event, ui){
+                var diyId = '" . Yii::$app->request->get('id') . "';
+                var data = $(this).sortable('toArray');
+                var containerId = $(event.target).attr('data-id');
+                $.ajax({
+                    url: '" . Url::to(['/diy/ajax/sortitems']) . "',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {type: '" . Diy::Position . "', data: data, containerId: containerId, diyId: diyId},
+                }).done(function(data){
+                });
+            }
+        });
+    }
+    
+    // Keo tha sap xep widget
+    function sortWidget(){
+        $('.let_widget_position').sortable({
+            connectWith: '.let_widget_position',
+            update: function(event, ui){
+                var diyId = '" . Yii::$app->request->get('id') . "';
+                var data = $(this).sortable('toArray');
+                var containerId = $(event.target).parents('.let_container').attr('data-id');
+                var positionId = $(event.target).parents('.let_position').attr('data-id');
+                $.ajax({
+                    url: '" . Url::to(['/diy/ajax/sortitems']) . "',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {type: '" . Diy::Widget . "', data: data, containerId: containerId, positionId: positionId, diyId: diyId},
+                }).done(function(data){
+                });
+            }
+        });
+    }
+    
     // Add container from database
     $('#addContainer').click(function(){
         var diyId = '" . Yii::$app->request->get('id') . "';
@@ -60,6 +99,8 @@ $this->registerJs("
         })
         .done(function (data){
             $('#let_containers').append(data);
+            sortPosition();
+            sortWidget();
         });
     });
     
@@ -76,6 +117,7 @@ $this->registerJs("
             })
             .done(function (data){
                 $(element).parents('.let_container').find('.let_positions').append(data);
+                setDraggable();
                 setDropablePosition();
             });
         }
@@ -95,6 +137,7 @@ $this->registerJs("
                 $('#let_widgets').append(data.template);
             
             alert(data.message);
+            setDraggable();
         });
     }
     
@@ -107,6 +150,7 @@ $this->registerJs("
                 var draggable_id = $(event.toElement).attr('data-id');
                 var positionId = $(event.target).attr('id');
                 getWidgetInfoFromDb(containerId, positionId, draggable_id, this);
+                sortWidget();
             }
         });
     }
@@ -120,6 +164,19 @@ $this->registerJs("
         });
     }
     
+    function accordionWidget(widgetId){
+        if ($('#setting_widget_' + widgetId).attr('data-show') == 0) {
+            $('.setting_widget').hide();
+            $('.setting_widget').attr('data-show', 0);
+            $('#setting_widget_' + widgetId).show();
+            $('#setting_widget_' + widgetId).attr('data-show', 1);
+        } else {
+            $('#setting_widget_' + widgetId).hide();
+            $('.setting_widget').attr('data-show', 0);
+            $('#setting_widget_' + widgetId).attr('data-show', 0);
+        }
+    }
+    
     // Get widget info by id from database
     function getWidgetInfoFromDb(containerId, positionId, draggable_id, let_position){
         var diyId = '" . Yii::$app->request->get('id') . "';
@@ -128,8 +185,46 @@ $this->registerJs("
             type: 'POST',
             data: {diyId: diyId, type: 'w', containerId: containerId, positionId: positionId, draggable_id: draggable_id},
         }).done(function(data){
-            $(let_position).append(data);
+            $(let_position).find('.let_widget_position').append(data);
         });
+    }
+    
+    // Call action save setting widget
+    function saveSettingsWidget(element){
+        var diyId = '" . Yii::$app->request->get('id') . "';
+        var settings = $(element).parents('#settingForm').serializeArray();
+        var containerId = $(element).parents('.setting_widget').attr('data-container');
+        var positionId = $(element).parents('.setting_widget').attr('data-position');
+        var widgetId = $(element).parents('.setting_widget').attr('data-id');
+        $.ajax({
+            url: '" . Url::to(['/diy/ajax/savesettingwidget']) . "',
+            type: 'POST',
+            data: {diyId: diyId, containerId: containerId, positionId: positionId, widgetId: widgetId, settings: settings},
+        }).done(function(data){
+        });
+    }
+    
+    // Call action delete item
+    function deleteItems(element, type, itemRemove){
+        var diyId = '" . Yii::$app->request->get('id') . "';
+        var containerId = $(element).parents('.let_container').attr('id');
+        var positionId = $(element).parents('.let_position').attr('id');
+        var widgetId = $(element).parents('.let_widget').attr('id');
+        var confirmAlert = confirm('" . Yii::t('yii', 'Are you sure you want to delete this item?') . "');
+        if (confirmAlert == true){
+            $.ajax({
+                url: '" . Url::to(['/diy/ajax/deleteitems']) . "',
+                type: 'POST',
+                data: {diyId: diyId, containerId: containerId, positionId: positionId, widgetId: widgetId, type: type},
+            }).done(function(status){
+                if (status == 1)
+                    $(element).parents(itemRemove).remove();
+                else 
+                    alert('Có lỗi xảy ra!');
+            });
+        } else {
+            alert(0);
+        }
     }
 ", yii\web\View::POS_END);
 
@@ -152,48 +247,17 @@ $this->registerJs("
         }
     });
     
-    // Keo tha sap xep position
-    $('.let_positions').sortable({
-        connectWith: '.let_positions',
-        update: function(event, ui){
-            var diyId = '" . Yii::$app->request->get('id') . "';
-            var data = $(this).sortable('toArray');
-            var containerId = $(event.target).attr('data-id');
-            $.ajax({
-                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
-                type: 'POST',
-                dataType: 'json',
-                data: {type: '" . Diy::Position . "', data: data, containerId: containerId, diyId: diyId},
-            }).done(function(data){
-            });
-        }
-    });
-    
-    // Keo tha sap xep widget
-    $('.let_position').sortable({
-        revert: true,
-        connectWith: '.let_position',
-        update: function(event, ui){
-            var diyId = '" . Yii::$app->request->get('id') . "';
-            var data = $(this).sortable('toArray');
-            var containerId = $(event.target).parent().attr('data-id');
-            var positionId = $(event.target).attr('data-id');
-            $.ajax({
-                url: '" . Url::to(['/diy/ajax/sortitems']) . "',
-                type: 'POST',
-                dataType: 'json',
-                data: {type: '" . Diy::Widget . "', data: data, containerId: containerId, positionId: positionId, diyId: diyId},
-            }).done(function(data){
-                console.log(data);
-            });
-        }
-    });
+    sortPosition();
+    sortWidget();
 ", yii\web\View::POS_READY);
 ?>
 </div>
 <style>
     .let_container {min-height: 40px; margin-bottom: 10px;}
     .let_position {border: 1px solid #999; min-height: 100px;}
-    .let_widget {background: white; border: 1px solid #e7eaec; padding: 7px; margin-bottom: 10px;}
+    .buttonDelete, .buttonDeleteWidget {display: none;}
+    .let_position:hover .buttonDelete{display: block}
+    .let_widget:hover .buttonDeleteWidget{display: block}
+    .let_widget {background: white; border: 1px solid #e7eaec; padding: 7px; margin: 10px 0;}
     .let_widget_origin {background: white; border: 1px solid #e7eaec; padding: 7px; margin-bottom: 10px;}
 </style>
